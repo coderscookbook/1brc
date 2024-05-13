@@ -424,37 +424,26 @@ class CreateMeasurement:
     )
 
     stations = pl.DataFrame(STATIONS, ("names", "means"))
-
+    print(stations) # TESTING ONLY
+    
+    # Define class constructor 'init method' w/attribute 'rng'
     def __init__(self):
         self.rng = np.random.default_rng()
 
-    def generate_batch(
-            self,
-            std_dev: float = 10,
-            records: int = 10_000_000
-    ) -> pl.DataFrame:
-        batch = self.stations.sample(
-            records,
-            with_replacement=True,
-            shuffle=True,
-            seed=self.rng.integers(np.iinfo(np.int64).max)
-        )
+    def generate_batch(self, std_dev: float = 10, records: int = 10_000_000) -> pl.DataFrame:
+        # .sample() used to randomly sample elements from a list,tuple,set w/out replacement
+        #  Each element in the sequence can only be selected once in the sample
+        #  Returns a new list
+        batch = self.stations.sample(records, with_replacement=True, shuffle=True, seed=self.rng.integers(np.iinfo(np.int64).max))
         batch = batch.with_columns(temperature=self.rng.normal(batch["means"], std_dev))
         return batch.drop("means")
 
-    def generate_measurement_file(
-            self,
-            file_name: str = "measurements.txt",
-            records: int = 1_000_000_000,
-            sep: str = ";",
-            std_dev: float = 10,
-    ) -> None:
-        print(
-            f"Creating measurement file '{file_name}' with {records:,} measurements..."
-        )
-        start = time.time()
-        batches = max(records // 10_000_000, 1)
-        batch_ends = np.linspace(0, records, batches + 1).astype(int)
+    # Create .txt file for testing
+    def generate_measurement_file(self, file_name: str = "measurements.txt", records: int = 1_000_000_000, sep: str = ";", std_dev: float = 10,) -> None:
+        print(f"Creating measurement file '{file_name}' with {records:,} measurements...")
+        start       = time.time()
+        batches     = max(records // 10_000_000, 1)
+        batch_ends  = np.linspace(0, records, batches + 1).astype(int)
 
         with open(file_name, "w") as f:
             for i in tqdm(range(batches)):
@@ -462,13 +451,12 @@ class CreateMeasurement:
                 data = self.generate_batch(std_dev, to - from_)
                 data.write_csv(f, separator=sep, float_precision=1, include_header=False)
 
-            print(
-                f"Created file '{file_name}' with {to:,} measurements in {time.time() - start:.2f} seconds"
-            )
+            print(f"Created file '{file_name}' with {to:,} measurements in {time.time() - start:.2f} seconds")
 
 
 if __name__ == "__main__":
-
+    
+    # Attempt to turn parameter into int 
     def min_records(records: str) -> int:
         try:
             value = int(records)
@@ -476,9 +464,7 @@ if __name__ == "__main__":
             raise argparse.ArgumentTypeError(f"invalid int value: '{records}'")
         else:
             if value < 1:
-                raise argparse.ArgumentTypeError(
-                    "Minimum number of records to be created is 1"
-                )
+                raise argparse.ArgumentTypeError("Minimum number of records to be created is 1")
             else:
                 return value
 
@@ -504,7 +490,4 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     measurement = CreateMeasurement()
-    measurement.generate_measurement_file(
-        file_name=args.output,
-        records=args.records,
-    )
+    measurement.generate_measurement_file(file_name=args.output, records=args.records)
